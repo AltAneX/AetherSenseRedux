@@ -11,11 +11,13 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 
-using Buttplug;
+using Buttplug.Client;
+using Buttplug.Client.Connectors.WebsocketConnector;
 using AetherSenseRedux.Trigger;
 using AetherSenseRedux.Pattern;
 using System.Diagnostics;
 using System.Threading;
+using Dalamud.Plugin.Services;
 
 namespace AetherSenseRedux
 {
@@ -75,7 +77,9 @@ namespace AetherSenseRedux
                 {
                     return false;
                 }
-                return Buttplug.IsScanning;
+                // Buttplug.IsScanning no longer exists?
+                // return Buttplug.IsScanning;
+                return false;
             }
         }
 
@@ -105,9 +109,9 @@ namespace AetherSenseRedux
 
         public WaitType WaitType { get; set; }
         private DalamudPluginInterface PluginInterface { get; init; }
-        private CommandManager CommandManager { get; init; }
+        private ICommandManager CommandManager { get; init; }
         private Configuration Configuration { get; set; }
-        [PluginService] private ChatGui ChatGui { get; init; } = null!;
+        [PluginService] private IChatGui ChatGui { get; init; } = null!;
         private PluginUI PluginUi { get; init; }
 
         private ButtplugClient? Buttplug;
@@ -123,7 +127,7 @@ namespace AetherSenseRedux
         /// <param name="commandManager"></param>
         public Plugin(
             [RequiredVersion("1.0")] DalamudPluginInterface pluginInterface,
-            [RequiredVersion("1.0")] CommandManager commandManager)
+            [RequiredVersion("1.0")] ICommandManager commandManager)
         {
             var t = DoBenchmark();
 
@@ -353,7 +357,7 @@ namespace AetherSenseRedux
             {
                 try
                 {
-                    ButtplugWebsocketConnectorOptions wsOptions = new(new Uri(Configuration.Address));
+                    ButtplugWebsocketConnector wsOptions = new(new Uri(Configuration.Address));
                     await Buttplug.ConnectAsync(wsOptions);
                     var t = DoScan();
                 }
