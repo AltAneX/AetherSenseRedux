@@ -1,14 +1,17 @@
-﻿using AetherSenseRedux.Pattern;
-using AetherSenseRedux.Trigger;
+﻿using AetherSenseReduxToo.Toy.Pattern;
 using Dalamud.Logging;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using XIVChatTypes;
+using AetherSenseReduxToo.Enums;
+using AetherSenseReduxToo.Game.Trigger;
+using AetherSenseReduxToo.Toy;
+using AetherSenseReduxToo.Game.XIVChatTypes;
+using Dalamud.Interface.Colors;
 
-namespace AetherSenseRedux
+namespace AetherSenseReduxToo.UI
 {
     // It is good to have this be disposable in general, in case you ever need it
     // to do any cleanup
@@ -26,6 +29,7 @@ namespace AetherSenseRedux
 
         private int SelectedTrigger = 0;
         private int SelectedFilterCategory = 0;
+        private int ll = 1;
 
         // In order to keep the UI from trampling all over the configuration as changes are being made, we keep a working copy here when needed.
         private Configuration? WorkingCopy;
@@ -45,7 +49,7 @@ namespace AetherSenseRedux
         }
 
         /// <summary>
-        /// Draw handler for plugin UI
+        /// Draw handler for _plugin UI
         /// </summary>
         public void Draw()
         {
@@ -66,11 +70,11 @@ namespace AetherSenseRedux
         {
             if (!SettingsVisible)
             {
-                
+
                 // if we aren't drawing the window we don't need a working copy of the configuration
                 if (WorkingCopy != null)
                 {
-                    PluginLog.Debug("Making WorkingCopy null.");
+                    Service.LogDebug("Making WorkingCopy null.");
                     WorkingCopy = null;
                 }
 
@@ -81,7 +85,7 @@ namespace AetherSenseRedux
 
             if (WorkingCopy == null)
             {
-                PluginLog.Debug("WorkingCopy was null, importing current config.");
+                Service.LogDebug("WorkingCopy was null, importing current config.");
                 WorkingCopy = new Configuration();
                 WorkingCopy.Import(configuration);
             }
@@ -89,10 +93,274 @@ namespace AetherSenseRedux
             ////
             ////    SETTINGS WINDOW
             ////
-            ImGui.SetNextWindowSize(new Vector2(640, 400), ImGuiCond.Appearing);
+            ImGui.SetNextWindowSize(new Vector2(640, 420), ImGuiCond.Appearing);
             if (ImGui.Begin("AetherSense Redux", ref settingsVisible, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.MenuBar))
             {
 
+
+                ////
+                ////    BODY
+                ////
+                ImGui.BeginChild("body", new Vector2(0, -ImGui.GetFrameHeightWithSpacing()-10), false);
+
+                ImGui.Indent(1); //for some reason the UI likes to cut off a pixel on the left side if we don't do this
+
+                var tabTriggers = false;
+                if (ImGui.BeginTabBar("MyTabBar", ImGuiTabBarFlags.None))
+                {
+                    if (ImGui.BeginTabItem("Intiface"))
+                    {
+                        var address = WorkingCopy.Address;
+                        if (ImGui.InputText("Intiface Address", ref address, 64))
+                        {
+                            WorkingCopy.Address = address;
+                        }
+                        ImGui.SameLine();
+                        if (ToyService.Status == ButtplugStatus.Connected)
+                        {
+                            if (ImGui.Button("Disconnect"))
+                            {
+                                ToyService.Stop(true);
+                            }
+                        }
+                        else if (ToyService.Status == ButtplugStatus.Connecting || ToyService.Status == ButtplugStatus.Disconnecting)
+                        {
+                            if (ImGui.Button("Wait..."))
+                            {
+
+                            }
+                        }
+                        else
+                        {
+                            if (ImGui.Button("Connect"))
+                            {
+                                configuration.Address = WorkingCopy.Address;
+                                ToyService.Start();
+                            }
+                        }
+
+                        var doreconnect = WorkingCopy.Reconnect;
+                        if (ImGui.Checkbox(String.Format("Auto Reconnect ({0}/20)",ToyService.connectAttempts), ref doreconnect))
+                        {
+                            WorkingCopy.Reconnect = doreconnect;
+
+                        }
+                        //if (ImGui.Button(_plugin.Scanning ? "Scanning..." : "Scan Now")){
+                        //    if (!_plugin.Scanning)
+                        //    {
+                        //        Task.Run(_plugin.DoScan);
+                        //    }
+                        //}
+
+                        ImGui.Spacing();
+                        ImGui.BeginChild("status", new Vector2(0, 0), true);
+                        if (ToyService.GetWaitType() == WaitType.Slow_Timer)
+                        {
+                            ImGui.TextColored(new Vector4(1, 0, 0, 1), "High resolution timers not available, patterns will be inaccurate.");
+                        }
+                        ImGui.Text("Connection Status:");
+                        ImGui.Indent();
+                        ImGui.Text(ToyService.Status == ButtplugStatus.Connected ? "Connected" : ToyService.Status == ButtplugStatus.Connecting ? "Connecting..." : ToyService.Status == ButtplugStatus.Error ? "Error" : "Disconnected");
+                        if (ToyService.LastException != null)
+                        {
+                            ImGui.Text(ToyService.LastException.Message);
+                        }
+                        ImGui.Unindent();
+                        if (ToyService.Status == ButtplugStatus.Connected)
+                        {
+                            ImGui.Text("Devices Connected:");
+                            ImGui.Indent();
+                            foreach (var device in ToyService.ConnectedDevices)
+                            {
+                                ImGui.Text(string.Format("{0} [{1}]", device.Key, (int)device.Value));
+                            }
+                            ImGui.Unindent();
+                        }
+
+                    ImGui.EndChild();
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Triggers"))
+                    {
+                        tabTriggers = true;
+                        ImGui.BeginChild("leftouter", new Vector2(155, 0));
+                        ImGui.Indent(1);
+                        ImGui.BeginChild("left", new Vector2(0, -ImGui.GetFrameHeightWithSpacing()), true);
+
+                        foreach (var (t, i) in WorkingCopy.Triggers.Select((value, i) => (value, i)))
+                        {
+                            ImGui.PushID(i); // We push the iterator to the ID stack so multiple triggers of the same type and name are still distinct
+                            if (ImGui.Selectable(string.Format("{0} ({1})", t.Name, t.Type), SelectedTrigger == i))
+                            {
+                                SelectedTrigger = i;
+                            }
+                            ImGui.PopID();
+                        }
+
+                        ImGui.EndChild();
+                        if (ImGui.BeginPopupContextItem("addmenu"))
+                        {
+                            if (ImGui.MenuItem("Chat Trigger"))
+                            {
+                                List<dynamic> triggers = WorkingCopy.Triggers;
+                                triggers.Add(new ChatTriggerConfig()
+                                {
+                                    PatternSettings = new ConstantPatternConfig()
+                                });
+                            }
+                            ImGui.EndPopup();
+                        }
+                        if (ImGui.Button("Remove"))
+                        {
+                            WorkingCopy.Triggers.RemoveAt(SelectedTrigger);
+                            if (SelectedTrigger >= WorkingCopy.Triggers.Count)
+                            {
+                                SelectedTrigger = SelectedTrigger > 0 ? WorkingCopy.Triggers.Count - 1 : 0;
+                            }
+                        }
+                        ImGui.SameLine();
+                        if (ImGui.Button("Add..."))
+                        {
+                            ImGui.OpenPopup("addmenu");
+                        }
+
+                        ImGui.EndChild();
+                        ImGui.SameLine();
+
+                        ImGui.BeginChild("right", new Vector2(0, 0), false);
+                        ImGui.Indent(1);
+                        if (WorkingCopy.Triggers.Count == 0)
+                        {
+                            ImGui.Text("Use the Add New button to add a trigger.");
+
+                        }
+                        else
+                        {
+                            DrawChatTriggerConfig(WorkingCopy.Triggers[SelectedTrigger]);
+                        }
+                        ImGui.Unindent();
+                        ImGui.EndChild();
+
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Advanced"))
+                    {
+                        if (ImGui.BeginCombo("##LogLevel", Service.Configuration.llName(WorkingCopy.LogLevel)))
+                        {
+                            for (int i = 0; i < 4; i++)
+                            {
+                                {
+                                    if (ImGui.Selectable(Service.Configuration.llName(i), i == WorkingCopy.LogLevel))
+                                    {
+                                        WorkingCopy.LogLevel = i;
+                                    }
+                                }
+                            }
+                            ImGui.EndCombo();
+                        }
+                        var configValue = WorkingCopy.LogChat;
+                        if (ImGui.Checkbox("Log Chat to Debug", ref configValue))
+                        {
+                            WorkingCopy.LogChat = configValue;
+
+                        }
+                        if (ImGui.Button("Restore Default Triggers"))
+                        {
+                            WorkingCopy.LoadDefaults();
+                        }
+                        ImGui.EndTabItem();
+                    }
+                    if (ImGui.BeginTabItem("Debug Log"))
+                    {
+
+                        if (ImGui.BeginChild("Scrolling"))
+                        {
+                            var logs = Service.LogMessages.ToArray().Reverse().ToList();
+                            for (var i = 0; i < logs.Count; i++)
+                            {
+                                if (i == 0)
+                                {
+                                    ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
+                                    ImGui.TextWrapped($"{i + 1} - {logs[i]}");
+                                    ImGui.PopStyleColor();
+                                }
+                                else
+                                    ImGui.TextWrapped($"{i + 1} - {logs[i]}");
+
+                                ImGui.Spacing();
+                                ImGui.Separator();
+                                ImGui.Spacing();
+                            }
+                        }
+                        ImGui.EndChild();  
+                        ImGui.EndTabItem();
+
+                    }
+                    ImGui.EndTabBar();
+                }
+
+                ImGui.Unindent(1); //for some reason the UI likes to cut off a pixel on the left side if we don't do this
+
+                ImGui.EndChild();
+                ImGui.Separator();
+                ImGui.Spacing();
+
+                ////
+                ////    FOOTER
+                ////
+                // save button
+                if (ImGui.Button("Save"))
+                {
+                    configuration.Import(WorkingCopy);
+                    configuration.Save();
+                    ToyService.reset();
+                    TriggerManager.reset();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("Save configuration changes to disk.");
+                }
+                // end save button
+                ImGui.SameLine();
+                // apply button
+                if (ImGui.Button("Apply"))
+                {
+                    configuration.Import(WorkingCopy);
+                    ToyService.reset();
+                    TriggerManager.reset();
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("Apply configuration changes without saving.");
+                }
+                // end apply button
+                ImGui.SameLine();
+                // revert button
+                if (ImGui.Button("Revert"))
+                {
+                    try
+                    {
+                        var cloneconfig = configuration.CloneConfigurationFromDisk();
+                        configuration.Import(cloneconfig);
+                        WorkingCopy.Import(configuration);
+                    }
+                    catch (Exception ex)
+                    {
+                        Service.LogError(ex, "Could not restore configuration.");
+                    }
+
+                }
+                if (ImGui.IsItemHovered())
+                {
+                    ImGui.SetTooltip("Discard all changes and reload the configuration from disk.");
+                }
+                // end revert button
+
+                //ImGui.SameLine();
+                //if (ImGui.Button("Run Benchmark"))
+                //{
+                //    var t = Plugin.DoBenchmark();
+                //}
                 ////
                 ////    MENU BAR
                 ////
@@ -112,213 +380,36 @@ namespace AetherSenseRedux
                         }
                         ImGui.EndMenu();
                     }
+                    if (tabTriggers)
+                    {
+                        if (ImGui.BeginMenu("Triggers"))
+                        {
+
+                            if (ImGui.BeginMenu("Add..."))
+                            {
+                                if (ImGui.MenuItem("Chat Trigger", "", false, true))
+                                {
+                                    List<dynamic> triggers = WorkingCopy.Triggers;
+                                    triggers.Add(new ChatTriggerConfig()
+                                    {
+                                        PatternSettings = new ConstantPatternConfig()
+                                    });
+                                }
+                                ImGui.EndMenu();
+                            }
+                            if (ImGui.MenuItem("Remove", "", false, true))
+                            {
+                                WorkingCopy.Triggers.RemoveAt(SelectedTrigger);
+                                if (SelectedTrigger >= WorkingCopy.Triggers.Count)
+                                {
+                                    SelectedTrigger = SelectedTrigger > 0 ? WorkingCopy.Triggers.Count - 1 : 0;
+                                }
+                            }
+                            ImGui.EndMenu();
+                        }
+                    }
                     ImGui.EndMenuBar();
                 }
-
-                ////
-                ////    BODY
-                ////
-                ImGui.BeginChild("body", new Vector2(0, -ImGui.GetFrameHeightWithSpacing()), false);
-                
-                ImGui.Indent(1); //for some reason the UI likes to cut off a pixel on the left side if we don't do this
-
-                if (ImGui.BeginTabBar("MyTabBar", ImGuiTabBarFlags.None))
-                {
-                    if (ImGui.BeginTabItem("Intiface"))
-                    {
-                        var address = WorkingCopy.Address;
-                        if (ImGui.InputText("Intiface Address", ref address, 64))
-                        {
-                            WorkingCopy.Address = address;
-                        }
-                        ImGui.SameLine();
-                        if (plugin.Status == ButtplugStatus.Connected)
-                        {
-                            if (ImGui.Button("Disconnect"))
-                            {
-                                plugin.Stop(true);
-                            }
-                        }
-                        else if (plugin.Status == ButtplugStatus.Connecting || plugin.Status == ButtplugStatus.Disconnecting)
-                        {
-                            if (ImGui.Button("Wait..."))
-                            {
-
-                            }
-                        }
-                        else 
-                        {
-                            if (ImGui.Button("Connect"))
-                            {
-                                configuration.Address = WorkingCopy.Address;
-                                plugin.Start();
-                            }
-                        }
-
-                        //if (ImGui.Button(plugin.Scanning ? "Scanning..." : "Scan Now")){
-                        //    if (!plugin.Scanning)
-                        //    {
-                        //        Task.Run(plugin.DoScan);
-                        //    }
-                        //}
-
-                        ImGui.Spacing();
-                        ImGui.BeginChild("status", new Vector2(0, 0), true);
-                        if (plugin.WaitType == WaitType.Slow_Timer)
-                        {
-                            ImGui.TextColored(new Vector4(1,0,0,1), "High resolution timers not available, patterns will be inaccurate.");
-                        }
-                        ImGui.Text("Connection Status:");
-                        ImGui.Indent();
-                        ImGui.Text(plugin.Status == ButtplugStatus.Connected ? "Connected" : plugin.Status == ButtplugStatus.Connecting ? "Connecting..." : plugin.Status == ButtplugStatus.Error ? "Error" : "Disconnected");
-                        if (plugin.LastException != null)
-                        {
-                            ImGui.Text(plugin.LastException.Message);
-                        }
-                        ImGui.Unindent();
-                        if (plugin.Status == ButtplugStatus.Connected)
-                        {
-                            ImGui.Text("Devices Connected:");
-                            ImGui.Indent();
-                            foreach (var device in plugin.ConnectedDevices)
-                            {
-                                ImGui.Text(String.Format("{0} [{1}]",device.Key,(int)device.Value));
-                            }
-                            ImGui.Unindent();
-                        }
-
-                        ImGui.EndChild();
-                        ImGui.EndTabItem();
-                    }
-                    if (ImGui.BeginTabItem("Triggers"))
-                    {
-                        ImGui.BeginChild("leftouter", new Vector2(155,0));
-                        ImGui.Indent(1);
-                        ImGui.BeginChild("left", new Vector2(0, -ImGui.GetFrameHeightWithSpacing()), true);
-                            
-                        foreach (var (t, i) in WorkingCopy.Triggers.Select((value, i) => (value, i)))
-                        {
-                            ImGui.PushID(i); // We push the iterator to the ID stack so multiple triggers of the same type and name are still distinct
-                            if (ImGui.Selectable(String.Format("{0} ({1})", t.Name, t.Type), SelectedTrigger == i))
-                            {
-                                SelectedTrigger = i;
-                            }
-                            ImGui.PopID();
-                        }
-
-                        ImGui.EndChild();
-                        if (ImGui.Button("Add New"))
-                        {
-                            List<dynamic> triggers = WorkingCopy.Triggers;
-                            triggers.Add(new ChatTriggerConfig()
-                            {
-                                PatternSettings = new ConstantPatternConfig()
-                            });
-                        }
-                        ImGui.SameLine();
-                        if (ImGui.Button("Remove"))
-                        {
-                            WorkingCopy.Triggers.RemoveAt(SelectedTrigger);
-                            if (SelectedTrigger >= WorkingCopy.Triggers.Count)
-                            {
-                                SelectedTrigger = (SelectedTrigger > 0) ? WorkingCopy.Triggers.Count - 1 : 0;
-                            }
-                        }
-
-                        ImGui.EndChild();
-                        ImGui.SameLine();
-                            
-                        ImGui.BeginChild("right", new Vector2(0, 0), false);
-                        ImGui.Indent(1);
-                        if (WorkingCopy.Triggers.Count == 0)
-                        {
-                            ImGui.Text("Use the Add New button to add a trigger.");
-
-                        } 
-                        else
-                        {
-                            DrawChatTriggerConfig(WorkingCopy.Triggers[SelectedTrigger]);
-                        }
-                        ImGui.Unindent();
-                        ImGui.EndChild();
-
-                        ImGui.EndTabItem();
-                    }
-                    if (ImGui.BeginTabItem("Advanced"))
-                    {
-                        var configValue = WorkingCopy.LogChat;
-                        if (ImGui.Checkbox("Log Chat to Debug", ref configValue))
-                        {
-                            WorkingCopy.LogChat = configValue;
-
-                        }
-                        if (ImGui.Button("Restore Default Triggers"))
-                        {
-                            WorkingCopy.LoadDefaults();
-                        }
-                        ImGui.EndTabItem();
-                    }
-                    ImGui.EndTabBar();
-                }
-
-                ImGui.Unindent(1); //for some reason the UI likes to cut off a pixel on the left side if we don't do this
-
-                ImGui.EndChild();
-                
-                ////
-                ////    FOOTER
-                ////
-                // save button
-                if (ImGui.Button("Save"))
-                {
-                    configuration.Import(WorkingCopy);
-                    configuration.Save();
-                    plugin.Reload();
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.SetTooltip("Save configuration changes to disk.");
-                }
-                // end save button
-                ImGui.SameLine();
-                // apply button
-                if (ImGui.Button("Apply"))
-                {
-                    configuration.Import(WorkingCopy);
-                    plugin.Reload();
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.SetTooltip("Apply configuration changes without saving.");
-                }
-                // end apply button
-                ImGui.SameLine();
-                // revert button
-                if (ImGui.Button("Revert"))
-                {
-                    try
-                    {
-                        var cloneconfig = configuration.CloneConfigurationFromDisk();
-                        configuration.Import(cloneconfig);
-                        WorkingCopy.Import(configuration);
-                    }
-                    catch (Exception ex)
-                    {
-                        PluginLog.Error(ex, "Could not restore configuration.");
-                    }
-
-                }
-                if (ImGui.IsItemHovered())
-                {
-                    ImGui.SetTooltip("Discard all changes and reload the configuration from disk.");
-                }
-                // end revert button
-
-                //ImGui.SameLine();
-                //if (ImGui.Button("Run Benchmark"))
-                //{
-                //    var t = Plugin.DoBenchmark();
-                //}
             }
 
             ImGui.End();
@@ -332,8 +423,8 @@ namespace AetherSenseRedux
         {
             if (ImGui.BeginTabBar("TriggerConfig", ImGuiTabBarFlags.None))
             {
-                
-                
+
+
                 DrawChatTriggerBasicTab(t);
 
                 DrawTriggerDevicesTab(t);
@@ -344,8 +435,8 @@ namespace AetherSenseRedux
                 }
 
                 DrawTriggerPatternTab(t);
-                
-                
+
+
                 ImGui.EndTabBar();
             }
         }
@@ -360,7 +451,7 @@ namespace AetherSenseRedux
             {
 
                 //begin name field
-                var name = (string)t.Name;
+                var name = t.Name;
                 if (ImGui.InputText("Name", ref name, 64))
                 {
                     t.Name = name;
@@ -368,7 +459,7 @@ namespace AetherSenseRedux
                 //end name field
 
                 //begin regex field
-                var regex = (string)t.Regex;
+                var regex = t.Regex;
                 if (ImGui.InputText("Regex", ref regex, 255))
                 {
                     t.Regex = regex;
@@ -379,10 +470,10 @@ namespace AetherSenseRedux
                 var retriggerdelay = (int)t.RetriggerDelay;
                 if (ImGui.InputInt("Retrigger Delay (ms)", ref retriggerdelay))
                 {
-                    t.RetriggerDelay = (long)retriggerdelay;
+                    t.RetriggerDelay = retriggerdelay;
                 }
                 //end retrigger delay field
-                var usefilter = (bool)t.UseFilter;
+                var usefilter = t.UseFilter;
                 if (ImGui.Checkbox("Use Filters", ref usefilter))
                 {
                     t.UseFilter = usefilter;
@@ -414,7 +505,7 @@ namespace AetherSenseRedux
                     {
                         if (t.EnabledDevices.Contains(device))
                         {
-                            selected[j] = true;
+                            selected[j] = true && !t.UseRandom && !t.UseAll;
                         }
                         else
                         {
@@ -433,17 +524,60 @@ namespace AetherSenseRedux
                         }
                         ImGui.EndListBox();
                     }
+                    //end retrigger delay field
+                    var useall = t.UseAll;
+                    if (ImGui.Checkbox("Use All Devices", ref useall))
+                    {
+                        t.UseAll = useall;
+                        if (useall)
+                        {
+                            t.UseRandom = false;
+                        }
+                    }
+                    //end retrigger delay field
+                    var userandom = t.UseRandom;
+                    if (ImGui.Checkbox("Use a random device", ref userandom))
+                    {
+                        t.UseRandom = userandom;
+                        if (userandom)
+                        {
+                            t.UseAll = false;
+                        }
+                    }
+                    //end retrigger delay field
+                    var useskip = t.UseSkip;
+                    if (ImGui.Checkbox("Sometimes skip", ref useskip))
+                    {
+                        t.UseSkip = useskip;
+
+                    }
+                    if (t.UseSkip)
+                    {
+                        //ImGui.SameLine();
+                        int skipchance = t.SkipChance;
+                        if (ImGui.InputInt("Skip Chance (/100)", ref skipchance))
+                        {
+                            if (skipchance > 100) skipchance = 0;
+                            if (skipchance < 0) skipchance = 0;
+                            t.SkipChance = skipchance;
+                        }
+                    }
                     if (modified)
                     {
                         var toEnable = new List<string>();
                         foreach (var (device, j) in WorkingCopy.SeenDevices.Select((value, i) => (value, i)))
                         {
-                            if (selected[j])
+                            if (selected[j] && !t.UseRandom && !t.UseAll)
                             {
                                 toEnable.Add(device);
                             }
                         }
                         t.EnabledDevices = toEnable;
+                        if (t.EnabledDevices.Count > 0)
+                        {
+                            t.UseRandom = false;
+                            t.UseAll = false;
+                        }
                     }
                 }
                 else
@@ -556,7 +690,7 @@ namespace AetherSenseRedux
                 //begin test button
                 if (ImGui.ArrowButton("test", ImGuiDir.Right))
                 {
-                    plugin.DoPatternTest(t.PatternSettings);
+                    ToyService.DoPatternTest(t.PatternSettings);
                 }
                 if (ImGui.IsItemHovered())
                 {

@@ -1,18 +1,25 @@
 # AetherSense Redux
 
-[![volkswagen status](https://auchenberg.github.io/volkswagen/volkswargen_ci.svg?v=1)](https://github.com/auchenberg/volkswagen)
 
 Turn your Warrior of Light into the Warrior of Butt with regex-powered realtime log parsing. Configure custom vibration patterns for game controllers, bluetooth-enabled sex toys, and more!
 
-Inspired by [AetherSense](https://github.com/Ms-Tress/AetherSense), powered by [Buttplug](https://buttplug.io/), controlled by you.
+Inspired by [AetherSense](https://github.com/Ms-Tress/AetherSense)
+Original by [digital pet](https://github.com/aka-tamagotchi/AetherSenseRedux/),
+Based on Fix by [AinaSnow](https://github.com/AinaSnow/AetherSenseRedux)
+powered by [Buttplug](https://buttplug.io/)
+controlled by you.
+
+### Changes
+#### 0.9.0.1
+- Fixed for Dalamud 9
+- Added option for all devices
+- Added option for random devices
+- Added a roulette chance option if you like a surprise
+- Tidied up a code to bundle it 
+- Added in stuff to allow future trigger expansion
+- Client reconnects if dropped
 
 ### Installation
-
-#### Preferred Method
- 
-Add `https://raw.githubusercontent.com/aka-tamagotchi/EgirlPlugins/main/repo.json` to your custom repo list and then install through Dalamud.
-
-#### Manual Method
 
 Unzip into %appdata%\XIVLauncher\devPlugins\ and restart the game.
 
@@ -20,7 +27,8 @@ Requires Intiface Desktop, XIVLauncher, and Dalamud to operate.
 
 ### Usage
 
-TODO: Write usage instructions
+TODO: Write usage full instructions
+
 
 ### Support
 

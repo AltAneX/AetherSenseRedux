@@ -1,8 +1,9 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using AetherSenseReduxToo.Toy.Pattern;
 
-namespace AetherSenseRedux.Pattern
+namespace AetherSenseReduxToo.Toy.Pattern
 {
     internal class ConstantPattern : IPattern
     {

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31919.166
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AetherSenseReduxFix", "AetherSenseRedux\AetherSenseReduxFix.csproj", "{68261C7B-0FE2-43BC-A1DF-7B34BED43889}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AetherSenseReduxToo", "AetherSenseRedux\AetherSenseReduxToo.csproj", "{68261C7B-0FE2-43BC-A1DF-7B34BED43889}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,8 +17,8 @@ Global
 		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Debug|Any CPU.Build.0 = Debug|x64
 		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Debug|x64.ActiveCfg = Debug|x64
 		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Debug|x64.Build.0 = Debug|x64
-		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Release|Any CPU.ActiveCfg = Release|x64
+		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Release|Any CPU.Build.0 = Release|x64
 		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Release|x64.ActiveCfg = Release|x64
 		{68261C7B-0FE2-43BC-A1DF-7B34BED43889}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection

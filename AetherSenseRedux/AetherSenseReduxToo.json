@@ -1,0 +1,16 @@
+{
+    "Author": "digital pet,AinaSnow fix,AltAneX",
+    "Name": "AetherSense Redux Too (18+)",
+    "Punchline": "Advanced haptic feedback using Intiface",
+    "Description": "An advanced haptic feedback plugin for game controllers, adult toys, and more using the Buttplug.io library. Requires Intiface Desktop to operate.",
+    "InternalName": "AetherSenseReduxToo",
+    "IsTestingExclusive": false,
+    "RepoUrl": "https://github.com/AltAneX/AetherSenseRedux",
+    "ApplicableVersion": "any",
+    "Tags": [
+        "parsing",
+        "buttplug",
+        "haptic",
+        "erp"
+    ]
+}

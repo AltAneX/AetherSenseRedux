@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AetherSenseRedux.Pattern
+namespace AetherSenseReduxToo.Toy.Pattern
 {
     internal class RampPattern : IPattern
     {
@@ -19,7 +19,7 @@ namespace AetherSenseRedux.Pattern
         {
             startLevel = config.Start;
             endLevel = config.End;
-            this.duration = config.Duration;
+            duration = config.Duration;
             Expires = DateTime.UtcNow + TimeSpan.FromMilliseconds(duration);
         }
 
@@ -29,7 +29,7 @@ namespace AetherSenseRedux.Pattern
             {
                 throw new PatternExpiredException();
             }
-            double progress = 1.0 - ((Expires.Ticks - time.Ticks) / ((double)duration*10000));
+            double progress = 1.0 - (Expires.Ticks - time.Ticks) / ((double)duration * 10000);
             return (endLevel - startLevel) * progress + startLevel;
         }
 

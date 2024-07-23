@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AetherSenseRedux.Pattern
+namespace AetherSenseReduxToo.Toy.Pattern
 {
     internal class PatternFactory
     {
@@ -23,7 +23,7 @@ namespace AetherSenseRedux.Pattern
                 case "Square":
                     return new SquarePattern((SquarePatternConfig)settings);
                 default:
-                    throw new ArgumentException(String.Format("Invalid pattern {0} specified", settings.Type));
+                    throw new ArgumentException(string.Format("Invalid pattern {0} specified", settings.Type));
             }
         }
 
@@ -42,7 +42,7 @@ namespace AetherSenseRedux.Pattern
                 case "Square":
                     return SquarePattern.GetDefaultConfiguration();
                 default:
-                    throw new ArgumentException(String.Format("Invalid pattern {0} specified", name));
+                    throw new ArgumentException(string.Format("Invalid pattern {0} specified", name));
             }
         }
 
@@ -89,7 +89,7 @@ namespace AetherSenseRedux.Pattern
                         Offset = (long)o.Offset
                     };
                 default:
-                    throw new ArgumentException(String.Format("Invalid pattern {0} specified", o.Type));
+                    throw new ArgumentException(string.Format("Invalid pattern {0} specified", o.Type));
             }
         }
     }

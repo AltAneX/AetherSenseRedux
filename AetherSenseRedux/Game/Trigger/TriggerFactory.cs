@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Linq;
 using System.Collections.Generic;
-using AetherSenseRedux.Pattern;
 using Microsoft.CSharp.RuntimeBinder;
+using AetherSenseReduxToo.Toy.Pattern;
+using AetherSenseReduxToo.Toy;
 
-namespace AetherSenseRedux.Trigger
+namespace AetherSenseReduxToo.Game.Trigger
 {
     internal class TriggerFactory
     {
-        public static ITrigger GetTriggerFromConfig(TriggerConfig config, ref List<Device> devices)
+        public static ITrigger GetTriggerFromConfig(TriggerConfig config)
         {
             switch (config.Type)
             {
                 case "Chat":
-                    return new ChatTrigger((ChatTriggerConfig)config, ref devices);
+                    return new ChatTrigger((ChatTriggerConfig)config);
                 default:
-                    throw new ArgumentException(String.Format("Invalid trigger {0} specified", config.Type));
+                    throw new ArgumentException(string.Format("Invalid trigger {0} specified", config.Type));
             }
         }
 
@@ -68,11 +69,16 @@ namespace AetherSenseRedux.Trigger
                             EnabledDevices = devices,
                             PatternSettings = PatternFactory.GetPatternConfigFromObject(o.PatternSettings),
                             FilterTable = filters,
-                            UseFilter = o.UseFilter
+                            UseFilter = o.UseFilter,
+                            UseAll = o.UseAll,
+                            UseRandom = o.UseRandom,
+                            UseSkip = o.UseSkip,
+                            SkipChance = o.SkipChance
                         };
-                    } catch (RuntimeBinderException)
+                    }
+                    catch (RuntimeBinderException)
                     {
-                        // Handle version 1 configurations without filter tables that would otherwise crash the plugin
+                        // Handle version 1 configurations without filter tables that would otherwise crash the _plugin
                         return new ChatTriggerConfig()
                         {
                             Name = (string)o.Name,
@@ -83,7 +89,7 @@ namespace AetherSenseRedux.Trigger
                         };
                     }
                 default:
-                    throw new ArgumentException(String.Format("Invalid trigger {0} specified", o.Type));
+                    throw new ArgumentException(string.Format("Invalid trigger {0} specified", o.Type));
             }
         }
     }

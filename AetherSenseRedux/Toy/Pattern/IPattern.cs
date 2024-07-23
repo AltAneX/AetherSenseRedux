@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AetherSenseRedux.Pattern
+namespace AetherSenseReduxToo.Toy.Pattern
 {
 
-    internal interface IPattern
+    public interface IPattern
     {
         DateTime Expires { get; set; }
         double GetIntensityAtTime(DateTime currTime);

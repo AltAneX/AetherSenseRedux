@@ -3,14 +3,16 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AetherSenseRedux.Pattern;
-using Buttplug;
+using Buttplug.Client;
+using Buttplug.Core;
 using Dalamud.Logging;
 using System.Threading;
+using AetherSenseReduxToo.Toy.Pattern;
+using AetherSenseReduxToo.Enums;
 
-namespace AetherSenseRedux
+namespace AetherSenseReduxToo.Toy
 {
-    internal class Device : IDisposable
+    public class Device : IDisposable
     {
         public readonly ButtplugClientDevice ClientDevice;
         public List<IPattern> Patterns;
@@ -30,7 +32,7 @@ namespace AetherSenseRedux
         private int frameTime = 16;     // The target time per update, in this case 16ms = ~60 ups, and also a pipe dream for BLE toys.
         private WaitType _waitType;
 
-        public Device(ButtplugClientDevice clientDevice,WaitType waitType)
+        public Device(ButtplugClientDevice clientDevice, WaitType waitType)
         {
             ClientDevice = clientDevice;
             Patterns = new List<IPattern>();
@@ -43,7 +45,7 @@ namespace AetherSenseRedux
         {
             _active = false;
             Patterns.Clear();
-            ClientDevice.Dispose();
+            ClientDevice.Stop();
         }
 
         /// <summary>
@@ -97,10 +99,10 @@ namespace AetherSenseRedux
                             break;
                     }
 
-                } 
+                }
                 else
                 {
-                    PluginLog.Verbose("OnTick for device {0} took {1}ms too long!", Name, t - frameTime);
+                    Service.LogDebug("OnTick for device {0} took {1}ms too long!", Name, t - frameTime);
                 }
                 _ups = _ups * 0.9 + timer.ElapsedMilliseconds * 0.1;
             }
@@ -150,7 +152,7 @@ namespace AetherSenseRedux
                 }
             }
             //TODO: Allow different merge modes besides average
-            double intensity = (intensities.Any()) ? intensities.Average() : 0;
+            double intensity = intensities.Any() ? intensities.Average() : 0;
 
             await Write(intensity);
         }
@@ -173,9 +175,10 @@ namespace AetherSenseRedux
 
             try
             {
-                await ClientDevice.SendVibrateCmd(clampedIntensity);
+                await ClientDevice.VibrateAsync(clampedIntensity);
 
-            } catch (Exception)
+            }
+            catch (Exception)
             {
                 // Connecting to an intiface server on Linux will spam the log with bluez errors
                 // so we just ignore all exceptions from this statement. Good? Probably not. Necessary? Yes.
@@ -192,7 +195,7 @@ namespace AetherSenseRedux
         /// <returns></returns>
         private static double Clamp(double value, double min, double max)
         {
-            return (value < min) ? min : (value > max) ? max : value;
+            return value < min ? min : value > max ? max : value;
         }
     }
 }

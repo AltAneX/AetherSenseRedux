@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace XIVChatTypes
+namespace AetherSenseReduxToo.Game.XIVChatTypes
 {
     public partial class XIVChatTypeEx
     {
@@ -18,7 +18,7 @@ namespace XIVChatTypes
         {
             var chatBaseType = (Channel)(magic & 0x007F);
             var chatSource = (Group)(magic >> 11);
-            var chatTarget = (Group)((magic >> 7) & 0xF);
+            var chatTarget = (Group)(magic >> 7 & 0xF);
 
             return (chatSource, chatTarget, chatBaseType);
         }
@@ -31,7 +31,7 @@ namespace XIVChatTypes
         public static uint Encode((Group, Group, Channel) chatType)
         {
             (var source, var target, var channel) = chatType;
-            return (uint)channel | ((uint)target << 7) | ((uint)source << 11);
+            return (uint)channel | (uint)target << 7 | (uint)source << 11;
         }
 
         public static Dictionary<Channel, string> ChannelFriendlyName { get; } = new Dictionary<Channel, string>()

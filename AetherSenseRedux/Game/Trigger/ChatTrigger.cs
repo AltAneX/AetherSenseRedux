@@ -1,5 +1,4 @@
-﻿using AetherSenseRedux.Pattern;
-using Dalamud.Game.Text;
+﻿using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using System;
 using System.Collections.Generic;
@@ -9,9 +8,11 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using Dalamud.Logging;
 using System.Collections.Concurrent;
-using XIVChatTypes;
+using AetherSenseReduxToo.Toy.Pattern;
+using AetherSenseReduxToo.Toy;
+using AetherSenseReduxToo.Game.XIVChatTypes;
 
-namespace AetherSenseRedux.Trigger
+namespace AetherSenseReduxToo.Game.Trigger
 {
     internal class ChatTrigger : ITrigger
     {
@@ -19,11 +20,14 @@ namespace AetherSenseRedux.Trigger
         public bool Enabled { get; set; }
         public string Type { get; } = "ChatTrigger";
         public string Name { get; init; }
-        public List<Device> Devices { get; init; }
         public List<string> EnabledDevices { get; init; }
         public PatternConfig PatternSettings { get; init; }
         private XIVChatFilter Filter { get; init; }
         public bool UseFilter { get; init; }
+        public bool UseRandom { get; set; } = false;
+        public bool UseSkip { get; set; } = false;
+        public bool UseAll { get; set; } = false;
+        public int SkipChance { get; set; } = 0;
 
         // ChatTrigger properties
         private ConcurrentQueue<ChatMessage> _messages;
@@ -31,19 +35,30 @@ namespace AetherSenseRedux.Trigger
         public long RetriggerDelay { get; init; }
         private DateTime RetriggerTime { get; set; }
         private Guid Guid { get; set; }
-        
+        private static void LogInfo(string message, params Object?[] args)
+        {
+            Service.LogInfo("[ASRToo ChatTrigger] " + String.Format(message, args));
+        }
+        private static void LogDebug(string message, params Object?[] args)
+        {
+            Service.LogDebug("[ASRToo ChatTrigger - Debug] " + String.Format(message, args));
+        }
+        private static void LogError(string message, params Object?[] args)
+        {
+            Service.LogError("[ASRToo ChatTrigger - Error] " + String.Format(message, args));
+        }
+
         /// <summary>
         /// Instantiates a new ChatTrigger.
         /// </summary>
         /// <param name="configuration">The configuration object for this trigger.</param>
         /// <param name="devices">A reference to the list of Buttplug Devices.</param>
         /// <returns>A ChatTrigger object.</returns>
-        public ChatTrigger(ChatTriggerConfig configuration, ref List<Device> devices)
+        public ChatTrigger(ChatTriggerConfig configuration)
         {
             // ITrigger properties
             Enabled = true;
             Name = configuration.Name;
-            Devices = devices;
             EnabledDevices = configuration.EnabledDevices;
             PatternSettings = PatternFactory.GetPatternConfigFromObject(configuration.PatternSettings);
 
@@ -56,6 +71,11 @@ namespace AetherSenseRedux.Trigger
             RetriggerTime = DateTime.MinValue;
             Guid = Guid.NewGuid();
 
+            UseAll = configuration.UseAll;
+            UseRandom = configuration.UseRandom;
+            UseSkip = configuration.UseSkip;
+            SkipChance = configuration.SkipChance;
+
         }
 
         /// <summary>
@@ -66,7 +86,7 @@ namespace AetherSenseRedux.Trigger
         {
             if (Enabled)
             {
-                PluginLog.Verbose("{0} ({1}): Received message to queue",Name, Guid.ToString());
+                LogDebug("{0} ({1}): Received message to queue", Name, Guid.ToString());
 
                 _messages.Enqueue(message);
             }
@@ -81,7 +101,7 @@ namespace AetherSenseRedux.Trigger
             {
                 if (DateTime.UtcNow < RetriggerTime)
                 {
-                    PluginLog.Debug("Trigger discarded, too soon");
+                    LogDebug("Trigger discarded, too soon");
                     return;
                 }
                 else
@@ -89,21 +109,37 @@ namespace AetherSenseRedux.Trigger
                     RetriggerTime = DateTime.UtcNow + TimeSpan.FromMilliseconds(RetriggerDelay);
                 }
             }
-            lock (Devices)
+            lock (ToyService.Devices())
             {
-                foreach (Device device in Devices)
-                {
-                    if (EnabledDevices.Contains(device.Name))
-                    {
-                        lock (device.Patterns)
-                        {
-                            device.Patterns.Add(PatternFactory.GetPatternFromObject(PatternSettings));
-                        }
-                    }
+                List<Device> devices = ToyService.Devices();
 
+                Random random = new Random(DateTime.UtcNow.Microsecond);
+                int randomNumber = random.Next(0, 100);
+                if ((randomNumber > SkipChance) || !UseSkip)
+                {
+                    LogInfo("Chance {0}", randomNumber);
+                    randomNumber = random.Next(0, devices.Count - 1);
+                    int o = -1;
+                    foreach (Device device in devices)
+                    {
+                        o++;
+                        if (EnabledDevices.Contains(device.Name) || UseAll || (o == randomNumber))
+                        {
+                            lock (device.Patterns)
+                            {
+                                device.Patterns.Add(PatternFactory.GetPatternFromObject(PatternSettings));
+                            }
+                        }
+
+                    }
+                }
+                else
+                {
+                    LogInfo("Skipped by chance {0}", randomNumber);
                 }
             }
         }
+
 
         /// <summary>
         /// 
@@ -132,7 +168,7 @@ namespace AetherSenseRedux.Trigger
                 ChatMessage message;
                 if (_messages.TryDequeue(out message))
                 {
-                    PluginLog.Verbose("{1}: Processing message: {0}", message.ToString(), Guid.ToString());
+                    LogDebug("{1}: Processing message: {0}", message.ToString(), Guid.ToString());
                     if (UseFilter && !Filter.Match(message.ChatType))
                     {
                         continue;
@@ -141,10 +177,11 @@ namespace AetherSenseRedux.Trigger
                     {
                         continue;
                     }
-                    
+
                     OnTrigger();
-                    PluginLog.Debug("{1}: Triggered on message: {0}", message.ToString(), Guid.ToString());
-                } else
+                    LogInfo("{1}: Triggered on message: {0}", message.ToString(), Guid.ToString());
+                }
+                else
                 {
                     await Task.Delay(50);
                 }
@@ -194,7 +231,7 @@ namespace AetherSenseRedux.Trigger
         /// <param name="sender"></param>
         /// <param name="message"></param>
         /// <param name="isHandled"></param>
-        public ChatMessage(XivChatType chatType, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
+        public ChatMessage(XivChatType chatType, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
         {
             ChatType = (uint)chatType;
             //SenderId = senderId;

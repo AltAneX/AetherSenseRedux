@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AetherSenseRedux.Pattern
+namespace AetherSenseReduxToo.Toy.Pattern
 {
     internal class RandomPattern : IPattern
     {
@@ -26,7 +26,7 @@ namespace AetherSenseRedux.Pattern
             {
                 throw new PatternExpiredException();
             }
-            return Scale(rand.NextDouble(),min,max);
+            return Scale(rand.NextDouble(), min, max);
         }
         private static double Scale(double value, double min, double max)
         {

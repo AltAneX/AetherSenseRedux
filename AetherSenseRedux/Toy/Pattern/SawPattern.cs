@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AetherSenseRedux.Pattern
+namespace AetherSenseReduxToo.Toy.Pattern
 {
     internal class SawPattern : IPattern
     {
@@ -20,8 +20,8 @@ namespace AetherSenseRedux.Pattern
         {
             startLevel = config.Start;
             endLevel = config.End;
-            this.duration = config.Duration;
-            this.duration1 = config.Duration1;
+            duration = config.Duration;
+            duration1 = config.Duration1;
             Expires = DateTime.UtcNow + TimeSpan.FromMilliseconds(duration);
         }
 
@@ -31,7 +31,7 @@ namespace AetherSenseRedux.Pattern
             {
                 throw new PatternExpiredException();
             }
-            double progress = 1.0 - ((Expires.Ticks - time.Ticks) / ((double)duration1*10000) % 1.0); // we only want the floating point remainder here
+            double progress = 1.0 - (Expires.Ticks - time.Ticks) / ((double)duration1 * 10000) % 1.0; // we only want the floating point remainder here
             return (endLevel - startLevel) * progress + startLevel;
         }
 
