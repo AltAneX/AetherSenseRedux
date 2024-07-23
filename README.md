@@ -31,10 +31,10 @@ TODO: Write usage full instructions
 
 **Tip for the RegEx**
 put .* at the end and start for a quick match
-.*You casted.*
+  `.*You casted.*`
 
 if you want to exclude a word put to exclude the use of sprint but all uses
-.*You use(?:(?!Sprint).)*$
+  `.*You use(?:(?!Sprint).)*$`
 
 If you turn on the log chat to debug you can see what messages the addon will see in the debug tab or in your log file (%appdata%\XIVLauncher\dalamud.log)
 ### Support
